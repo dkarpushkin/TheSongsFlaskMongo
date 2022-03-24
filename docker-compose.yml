@@ -1,0 +1,63 @@
+version: "3.6"
+
+
+services:
+  flask:
+    build:
+      context: .
+      args:
+        - INSTALL_PYTHON_VERSION=3.10
+    image: "songs-production"
+    ports:
+      - "8080:5000"
+    environment:
+      FLASK_ENV: production
+      FLASK_DEBUG: 0
+      LOG_LEVEL: info
+      GUNICORN_WORKERS: 4
+    volumes:
+      - ./:/songs_app
+    env_file:
+      - .env
+  
+  manage:
+    build:
+      context: .
+      args:
+        - INSTALL_PYTHON_VERSION=3.10
+    entrypoint: flask
+    environment:
+      FLASK_APP: songs.app
+      FLASK_ENV: production
+      FLASK_DEBUG: 0
+    image: "songs-manage"
+    stdin_open: true
+    tty: true
+    env_file:
+      - .env
+
+  songs_db:
+    image: mongo:4.4
+    restart: always
+    ports:
+      - "27017:27017"
+    env_file:
+      - .env
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_LOGIN}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    volumes:
+      - ./data/:/data_json
+  
+  mongo-express:
+    image: mongo-express
+    restart: always
+    ports:
+      - 8081:8081
+    env_file:
+      - .env
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_LOGIN}:${MONGO_PASSWORD}@songs_db:27017/
+    depends_on:
+      - songs_db
+    
